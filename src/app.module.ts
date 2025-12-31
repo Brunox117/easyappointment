@@ -9,6 +9,8 @@ import { PatientsModule } from './patients/patients.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { MessageModule } from './message/message.module';
+import { WaIntegrationModule } from './wa-integration/wa-integration.module';
+import { AiToolsModule } from './ai-tools/ai-tools.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { MessageModule } from './message/message.module';
     AppointmentsModule,
     ConversationModule,
     MessageModule,
+    WaIntegrationModule,
+    AiToolsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
