@@ -4,11 +4,13 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { AppointmentStatus } from './appointment-status.enum';
 import { Clinic } from '../../clinic/entities/clinic.entity';
 import { Doctor } from '../../doctors/entities/doctor.entity';
 import { Patient } from '../../patients/entities/patient.entity';
+import { Conversation } from '../../conversation/entities/conversation.entity';
 
 @Entity('appointment')
 export class Appointment {
@@ -44,4 +46,7 @@ export class Appointment {
 
   @Column()
   status: AppointmentStatus;
+
+  @OneToMany(() => Conversation, (conversation) => conversation.appointment)
+  conversations?: Conversation[];
 }
