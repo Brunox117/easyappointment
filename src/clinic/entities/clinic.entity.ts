@@ -17,7 +17,7 @@ export class Clinic {
   @Column({ type: 'varchar', length: 255 })
   address: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   notes: string;
 
   @Column({ default: true })
