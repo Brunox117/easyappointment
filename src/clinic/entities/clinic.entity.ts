@@ -1,5 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
-import { Doctor } from '../../doctors/entities/doctor.entity';
+import { User } from '../../auth/entities/user.entity';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
 
@@ -23,8 +23,9 @@ export class Clinic {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => Doctor, (doctor) => doctor.clinic)
-  doctors: Doctor[];
+  // Future migration: replace Doctor relation with User (doctor role)
+  @OneToMany(() => User, (user) => user.clinic)
+  doctors: User[];
 
   @OneToMany(() => Patient, (patient) => patient.clinic)
   patients: Patient[];

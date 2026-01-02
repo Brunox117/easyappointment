@@ -4,7 +4,11 @@ import {
   Column,
   Entity,
   PrimaryGeneratedColumn,
+  OneToMany,
+  ManyToOne,
 } from 'typeorm';
+import { Clinic } from '../../clinic/entities/clinic.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
 
 @Entity('users')
 export class User {
@@ -28,6 +32,17 @@ export class User {
     default: true,
   })
   isActive: boolean;
+
+  // NOTE: In a future iteration, doctors will be represented as Users with the role 'doctor'.
+  // This field is introduced now to support that migration path.
+  @Column('text', { nullable: true })
+  phoneNumber?: string;
+
+  @ManyToOne(() => Clinic, (clinic) => clinic.doctors, { nullable: true })
+  clinic?: Clinic;
+
+  @OneToMany(() => Appointment, (appointment) => appointment.doctor)
+  doctorAppointments?: Appointment[];
 
   @Column('text', {
     array: true,

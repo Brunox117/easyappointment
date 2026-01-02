@@ -4,13 +4,13 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClinicModule } from './clinic/clinic.module';
-import { DoctorsModule } from './doctors/doctors.module';
 import { PatientsModule } from './patients/patients.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { ConversationModule } from './conversation/conversation.module';
 import { MessageModule } from './message/message.module';
 import { WaIntegrationModule } from './wa-integration/wa-integration.module';
 import { AiToolsModule } from './ai-tools/ai-tools.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -26,7 +26,7 @@ import { AiToolsModule } from './ai-tools/ai-tools.module';
       synchronize: true,
     }),
     ClinicModule,
-    DoctorsModule,
+    AuthModule,
     PatientsModule,
     AppointmentsModule,
     ConversationModule,

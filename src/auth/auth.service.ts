@@ -12,6 +12,7 @@ import { User } from './entities/user.entity';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
+import { ValidRoles } from './interfaces/valid-roles';
 
 @Injectable()
 export class AuthService {
@@ -19,11 +20,12 @@ export class AuthService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
-  async create(createUserDto: CreateUserDto) {
+  async createDoctorUser(createUserDto: CreateUserDto) {
     try {
       const { password, ...userData } = createUserDto;
       const user = this.userRepository.create({
         ...userData,
+        roles: [ValidRoles.doctor],
         password: bcrypt.hashSync(password, 10),
       });
       await this.userRepository.save(user);

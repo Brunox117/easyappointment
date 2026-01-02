@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { AppointmentStatus } from './appointment-status.enum';
 import { Clinic } from '../../clinic/entities/clinic.entity';
-import { Doctor } from '../../doctors/entities/doctor.entity';
+import { User } from '../../auth/entities/user.entity';
 import { Patient } from '../../patients/entities/patient.entity';
 import { Conversation } from '../../conversation/entities/conversation.entity';
 
@@ -27,9 +27,9 @@ export class Appointment {
   @Column()
   doctorId: string;
 
-  @ManyToOne(() => Doctor, (doctor) => doctor.appointments)
+  @ManyToOne(() => User, (user) => user.doctorAppointments)
   @JoinColumn({ name: 'doctorId' })
-  doctor?: Doctor;
+  doctor?: User;
 
   @Column()
   patientId: string;
