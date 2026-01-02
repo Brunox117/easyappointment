@@ -33,8 +33,6 @@ export class User {
   })
   isActive: boolean;
 
-  // NOTE: In a future iteration, doctors will be represented as Users with the role 'doctor'.
-  // This field is introduced now to support that migration path.
   @Column('text', { nullable: true })
   phoneNumber?: string;
 
@@ -46,7 +44,7 @@ export class User {
 
   @Column('text', {
     array: true,
-    default: ['user'],
+    default: ['doctor'],
   })
   roles: string[];
 
