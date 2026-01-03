@@ -36,13 +36,6 @@ export class Conversation {
   appointment?: Appointment;
 
   @Column({
-    type: 'varchar',
-    length: 20,
-    default: 'open',
-  })
-  status: 'open' | 'closed' | 'pending';
-
-  @Column({
     name: 'last_message_at',
     type: 'timestamp with time zone',
     nullable: true,
