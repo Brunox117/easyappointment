@@ -11,6 +11,7 @@ import { MessageModule } from './message/message.module';
 import { WaIntegrationModule } from './wa-integration/wa-integration.module';
 import { AiToolsModule } from './ai-tools/ai-tools.module';
 import { AuthModule } from './auth/auth.module';
+import { TelegramIntegrationModule } from './telegram-integration/telegram-integration.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
     MessageModule,
     WaIntegrationModule,
     AiToolsModule,
+    TelegramIntegrationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
