@@ -13,6 +13,6 @@ export class TelegramIntegrationService {
 
   @On('message')
   async onMessage(@Ctx() ctx: Context) {
-    await ctx.reply('Processing...!');
+    await ctx.reply('Hola desde el servidor!');
   }
 }
