@@ -3,6 +3,7 @@ import { TelegramIntegrationService } from './telegram-integration.service';
 import { TelegramIntegrationController } from './telegram-integration.controller';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { LlmServiceModule } from 'src/llm-service/llm-service.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         };
       },
     }),
+    LlmServiceModule,
   ],
   controllers: [TelegramIntegrationController],
   providers: [TelegramIntegrationService],
