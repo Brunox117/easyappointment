@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { WaIntegrationService } from './wa-integration.service';
 import { CreateWaIntegrationDto } from './dto/create-wa-integration.dto';
 import { UpdateWaIntegrationDto } from './dto/update-wa-integration.dto';
@@ -23,7 +31,10 @@ export class WaIntegrationController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateWaIntegrationDto: UpdateWaIntegrationDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateWaIntegrationDto: UpdateWaIntegrationDto,
+  ) {
     return this.waIntegrationService.update(+id, updateWaIntegrationDto);
   }
 

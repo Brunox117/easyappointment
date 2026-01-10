@@ -1,26 +1,49 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAiToolDto } from './dto/create-ai-tool.dto';
-import { UpdateAiToolDto } from './dto/update-ai-tool.dto';
+import { Injectable, Logger } from '@nestjs/common';
+import { tool } from 'ai';
+import { z } from 'zod';
 
 @Injectable()
 export class AiToolsService {
-  create(createAiToolDto: CreateAiToolDto) {
-    return 'This action adds a new aiTool';
-  }
+  private readonly logger = new Logger(AiToolsService.name);
 
-  findAll() {
-    return `This action returns all aiTools`;
-  }
+  getAvailabilityTool() {
+    return tool({
+      description:
+        'Obtiene las fechas y horarios disponibles para agendar citas médicas',
+      inputSchema: z.object({
+        specialty: z
+          .string()
+          .optional()
+          .describe('Especialidad médica requerida'),
+        doctorName: z
+          .string()
+          .optional()
+          .describe('Nombre del médico (opcional)'),
+      }),
+      execute: ({ specialty, doctorName }) => {
+        this.logger.log(
+          `Consultando disponibilidad para especialidad: ${specialty}, médico: ${doctorName}`,
+        );
 
-  findOne(id: number) {
-    return `This action returns a #${id} aiTool`;
-  }
-
-  update(id: number, updateAiToolDto: UpdateAiToolDto) {
-    return `This action updates a #${id} aiTool`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} aiTool`;
+        return {
+          availableDates: [
+            {
+              date: '2025-01-15',
+              slots: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
+            },
+            {
+              date: '2025-01-16',
+              slots: ['09:00', '10:00', '14:00', '15:00', '16:00'],
+            },
+            {
+              date: '2025-01-17',
+              slots: ['09:00', '10:00', '11:00', '14:00', '15:00'],
+            },
+          ],
+          specialty: specialty || 'general',
+          doctorName: doctorName || 'cualquier médico',
+        };
+      },
+    });
   }
 }
