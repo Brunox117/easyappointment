@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { handleErrors } from 'src/utilities/helpers/handle-errors';
-import { generateText } from 'ai';
+import { generateText, stepCountIs } from 'ai';
 import { groq } from '@ai-sdk/groq';
 import { AiToolsService } from '../ai-tools/ai-tools.service';
 
@@ -8,21 +8,17 @@ import { AiToolsService } from '../ai-tools/ai-tools.service';
 export class LlmServiceService {
   private readonly logger = new Logger(LlmServiceService.name);
   private readonly systemPrompt = `Eres un asistente virtual de citas médicas para el sistema Easyappointment. Tu objetivo es ayudar a pacientes a agendar, cancelar, modificar y consultar sus citas médicas a través de chat (Telegram/WhatsApp).
+  Al dar respuesta no mandes formato de markdown, solo texto plano.
 
 REGLAS DE INTERACCIÓN:
 1. Responde de manera concisa y clara (máximo 2-3 oraciones por respuesta)
 2. Usa lenguaje amigable y profesional
-3. Pregunta solo la información necesaria: nombre del paciente, fecha/hora preferida, especialidad requerida, o nombre del médico
+3. Pregunta solo la información necesaria: nombre del paciente, fecha/hora preferida, especialidad requerida, o nombre del médico pero sin que el usuario sienta que quieres rápido un formato.
 4. Si no entiendes la solicitud, pide aclaraciones simples
 5. No inventes información; si necesitas datos del sistema, usa las herramientas disponibles
 
 HERRAMIENTAS DISPONIBLES:
-- getAvailableDates: Úsala SIEMPRE cuando el usuario pregunte por disponibilidad de citas, horarios disponibles o fechas disponibles
-
-INFORMACIÓN DEL SISTEMA:
-- Estructura: Organization > Clinic > Doctor (con Availability) > Patient > Appointment
-- Puedes gestionar citas, horarios de doctores, disponibilidad y pacientes
-- Cada acción genera registros en Conversation > Message y AIAction
+- getAvailableDates: Úsala SIEMPRE cuando el usuario pregunte por disponibilidad de citas, horarios disponibles o fechas disponibles, no te olvides de formatear la respuesta para que sea más legible y fácil de entender.
 
 FUNCIONES PRINCIPALES:
 - Agendar nuevas citas
@@ -56,6 +52,7 @@ EJEMPLOS DE RESPUESTAS:
         tools: {
           getAvailableDates: this.aiToolsService.getAvailabilityTool(),
         },
+        stopWhen: stepCountIs(2),
       });
       console.log(result);
       return result.text;
