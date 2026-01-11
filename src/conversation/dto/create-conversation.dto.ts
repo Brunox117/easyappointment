@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateConversationDto {
   @IsNotEmpty()
@@ -6,8 +6,7 @@ export class CreateConversationDto {
   @IsUUID()
   patientId: string;
 
-  @IsNotEmpty()
   @IsString()
-  @IsUUID()
-  appointmentId: string;
+  @IsOptional()
+  appointmentId?: string;
 }

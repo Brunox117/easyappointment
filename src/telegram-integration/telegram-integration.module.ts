@@ -4,6 +4,8 @@ import { TelegramIntegrationController } from './telegram-integration.controller
 import { TelegrafModule } from 'nestjs-telegraf';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LlmServiceModule } from 'src/llm-service/llm-service.module';
+import { PatientsModule } from 'src/patients/patients.module';
+import { ConversationModule } from 'src/conversation/conversation.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { LlmServiceModule } from 'src/llm-service/llm-service.module';
       },
     }),
     LlmServiceModule,
+    PatientsModule,
+    ConversationModule,
   ],
   controllers: [TelegramIntegrationController],
   providers: [TelegramIntegrationService],

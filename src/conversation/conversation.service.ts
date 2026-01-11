@@ -66,6 +66,19 @@ export class ConversationService {
     }
   }
 
+  async findOneByPatientId(patientId: string) {
+    try {
+      this.logger.log('Finding one conversation by patient id...');
+      const conversation = await this.conversationRepository.findOne({
+        where: { patientId },
+      });
+      return conversation;
+    } catch (error) {
+      this.logger.error(error);
+      handleErrors(error);
+    }
+  }
+
   async findOne(id: string) {
     try {
       this.logger.log('Finding one conversation...');

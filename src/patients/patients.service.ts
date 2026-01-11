@@ -63,6 +63,19 @@ export class PatientsService {
     }
   }
 
+  async findOneByNumber(number: string) {
+    try {
+      this.logger.log('Finding one patient by number...');
+      const patient = await this.patientRepository.findOne({
+        where: { phoneNumber: number },
+      });
+      return patient;
+    } catch (error) {
+      this.logger.error(error);
+      handleErrors(error);
+    }
+  }
+
   async update(id: string, updatePatientDto: UpdatePatientDto) {
     // If clinicId is being updated, validate the new clinic exists
     const newClinicId = updatePatientDto.clinicId;
