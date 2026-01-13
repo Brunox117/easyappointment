@@ -104,4 +104,20 @@ export class MessageService {
       handleErrors(error);
     }
   }
+
+  async findRecentByConversationId(conversationId: string, limit: number) {
+    try {
+      this.logger.log(
+        `Finding recent ${limit} messages for conversation ${conversationId}...`,
+      );
+      return await this.messageRepository.find({
+        where: { conversationId },
+        order: { createdAt: 'ASC' },
+        take: limit,
+      });
+    } catch (error) {
+      this.logger.error(error);
+      handleErrors(error);
+    }
+  }
 }

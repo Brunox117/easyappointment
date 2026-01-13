@@ -8,6 +8,7 @@ import { PatientsService } from 'src/patients/patients.service';
 import { handleErrors } from 'src/utilities/helpers/handle-errors';
 import { Context } from 'telegraf';
 import { Patient } from 'src/patients/entities/patient.entity';
+import type { AssistantModelMessage, UserModelMessage } from 'ai';
 
 //Special telegraf decorator to handle telegram updates
 const DEFAULT_TELEGRAM_CLINIC_ID =
@@ -56,9 +57,33 @@ export class TelegramIntegrationService {
         fromPatient: true,
       });
 
-      const response = await this.llmService.chat(messageText);
+      const recentMessages =
+        await this.messageService.findRecentByConversationId(
+          conversation.id,
+          14,
+        );
+      const history: Array<UserModelMessage | AssistantModelMessage> = (
+        recentMessages || []
+      )
+        .map((msg) => {
+          const role: 'user' | 'assistant' = msg.fromPatient
+            ? 'user'
+            : 'assistant';
+          return {
+            role,
+            content: msg.content,
+          };
+        })
+        .slice(-14);
+
+      const response = await this.llmService.chat(messageText, history);
       if (response) {
         await ctx.reply(response);
+        await this.messageService.create({
+          conversationId: conversation.id,
+          content: response,
+          fromPatient: false,
+        });
       }
     } catch (error) {
       this.logger.error(error);

@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { handleErrors } from 'src/utilities/helpers/handle-errors';
-import { generateText, stepCountIs } from 'ai';
+import {
+  generateText,
+  stepCountIs,
+  type AssistantModelMessage,
+  type ModelMessage,
+  type UserModelMessage,
+} from 'ai';
 import { groq } from '@ai-sdk/groq';
 import { AiToolsService } from '../ai-tools/ai-tools.service';
 
@@ -34,20 +40,26 @@ EJEMPLOS DE RESPUESTAS:
 
   constructor(private readonly aiToolsService: AiToolsService) {}
 
-  async chat(message: string) {
+  async chat(
+    message: string,
+    history?: Array<UserModelMessage | AssistantModelMessage>,
+  ) {
     this.logger.log('Chatting with LLM...');
     try {
+      const historyMessages = history ?? [];
+      const messages: ModelMessage[] = [
+        {
+          role: 'system',
+          content: this.systemPrompt,
+        },
+        ...historyMessages,
+        {
+          role: 'user',
+          content: message,
+        },
+      ];
       const result = await generateText({
-        messages: [
-          {
-            role: 'system',
-            content: this.systemPrompt,
-          },
-          {
-            role: 'user',
-            content: message,
-          },
-        ],
+        messages,
         model: groq('openai/gpt-oss-20b'),
         tools: {
           getAvailableDates: this.aiToolsService.getAvailabilityTool(),
