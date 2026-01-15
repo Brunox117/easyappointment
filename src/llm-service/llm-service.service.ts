@@ -43,6 +43,7 @@ EJEMPLOS DE RESPUESTAS:
   async chat(
     message: string,
     history?: Array<UserModelMessage | AssistantModelMessage>,
+    patientId?: string,
   ) {
     this.logger.log('Chatting with LLM...');
     try {
@@ -58,12 +59,19 @@ EJEMPLOS DE RESPUESTAS:
           content: message,
         },
       ];
+      const tools = {
+        getAvailableDates: this.aiToolsService.getAvailabilityTool(),
+        ...(patientId
+          ? {
+              changeUserName: this.aiToolsService.changeUserNameTool(patientId),
+            }
+          : {}),
+      };
+
       const result = await generateText({
         messages,
         model: groq('openai/gpt-oss-20b'),
-        tools: {
-          getAvailableDates: this.aiToolsService.getAvailabilityTool(),
-        },
+        tools,
         stopWhen: stepCountIs(2),
       });
       console.log(result);

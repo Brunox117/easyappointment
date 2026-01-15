@@ -76,7 +76,11 @@ export class TelegramIntegrationService {
         })
         .slice(-14);
 
-      const response = await this.llmService.chat(messageText, history);
+      const response = await this.llmService.chat(
+        messageText,
+        history,
+        patient.id,
+      );
       if (response) {
         await ctx.reply(response);
         await this.messageService.create({

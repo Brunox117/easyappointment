@@ -1,10 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { tool } from 'ai';
+import { PatientsService } from 'src/patients/patients.service';
 import { z } from 'zod';
 
 @Injectable()
 export class AiToolsService {
   private readonly logger = new Logger(AiToolsService.name);
+  constructor(private readonly patientsService: PatientsService) {}
+
+  changeUserNameTool(patientId: string) {
+    return tool({
+      description: 'Cambia el nombre del paciente',
+      inputSchema: z.object({
+        name: z.string().describe('Nuevo nombre del paciente'),
+      }),
+      execute: async ({ name }) => {
+        this.logger.log(`Cambiando nombre del paciente ${patientId} a ${name}`);
+        return this.patientsService.update(patientId, { name });
+      },
+    });
+  }
 
   getAvailabilityTool() {
     return tool({
