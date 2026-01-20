@@ -44,6 +44,8 @@ EJEMPLOS DE RESPUESTAS:
     message: string,
     history?: Array<UserModelMessage | AssistantModelMessage>,
     patientId?: string,
+    clinicId?: string,
+    doctorId?: string,
   ) {
     this.logger.log('Chatting with LLM...');
     try {
@@ -64,6 +66,15 @@ EJEMPLOS DE RESPUESTAS:
         ...(patientId
           ? {
               changeUserName: this.aiToolsService.changeUserNameTool(patientId),
+            }
+          : {}),
+        ...(patientId && clinicId && doctorId
+          ? {
+              createAppointment: this.aiToolsService.createAppointmentTool(
+                patientId,
+                doctorId,
+                clinicId,
+              ),
             }
           : {}),
       };

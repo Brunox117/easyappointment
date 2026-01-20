@@ -14,12 +14,16 @@ import type { AssistantModelMessage, UserModelMessage } from 'ai';
 const DEFAULT_TELEGRAM_CLINIC_ID =
   process.env.TELEGRAM_DEFAULT_CLINIC_ID ??
   '7b94feb0-5db7-4c5e-b090-4238cdc0fb70';
+const DEFAULT_TELEGRAM_DOCTOR_ID =
+  process.env.TELEGRAM_DEFAULT_DOCTOR_ID ??
+  '25d45fb9-9483-44e2-8fdb-16484b4c4821';
 
 @Update()
 @Injectable()
 export class TelegramIntegrationService {
   private readonly logger = new Logger(TelegramIntegrationService.name);
   private readonly defaultClinicId = DEFAULT_TELEGRAM_CLINIC_ID;
+  private readonly defaultDoctorId = DEFAULT_TELEGRAM_DOCTOR_ID;
   constructor(
     private readonly llmService: LlmServiceService,
     private readonly conversationService: ConversationService,
@@ -80,6 +84,8 @@ export class TelegramIntegrationService {
         messageText,
         history,
         patient.id,
+        this.defaultClinicId,
+        this.defaultDoctorId,
       );
       if (response) {
         await ctx.reply(response);

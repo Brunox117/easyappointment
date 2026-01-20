@@ -25,41 +25,44 @@ export class AppointmentsService {
   ) {}
 
   async create(createAppointmentDto: CreateAppointmentDto) {
-    // Validate that the referenced clinic exists
-    const clinicId = createAppointmentDto.clinicId;
-    if (clinicId) {
-      const clinic = await this.clinicRepository.findOne({
-        where: { id: clinicId },
-      });
-      if (!clinic) {
-        throw new NotFoundException(`Clinic with id ${clinicId} not found`);
-      }
-    }
-
-    // Validate that the referenced doctor exists
-    const doctorId = createAppointmentDto.doctorId;
-    if (doctorId) {
-      const doctor = await this.userRepository.findOne({
-        where: { id: doctorId },
-      });
-      if (!doctor) {
-        throw new NotFoundException(`Doctor with id ${doctorId} not found`);
-      }
-    }
-
-    // Validate that the referenced patient exists
-    const patientId = createAppointmentDto.patientId;
-    if (patientId) {
-      const patient = await this.patientRepository.findOne({
-        where: { id: patientId },
-      });
-      if (!patient) {
-        throw new NotFoundException(`Patient with id ${patientId} not found`);
-      }
-    }
-
-    const appointment = this.appointmentRepository.create(createAppointmentDto);
+    this.logger.log(`[Create appointment] starting...`);
     try {
+      // Validate that the referenced clinic exists
+      const clinicId = createAppointmentDto.clinicId;
+      if (clinicId) {
+        const clinic = await this.clinicRepository.findOne({
+          where: { id: clinicId },
+        });
+        if (!clinic) {
+          throw new NotFoundException(`Clinic with id ${clinicId} not found`);
+        }
+      }
+
+      // Validate that the referenced doctor exists
+      const doctorId = createAppointmentDto.doctorId;
+      if (doctorId) {
+        const doctor = await this.userRepository.findOne({
+          where: { id: doctorId },
+        });
+        if (!doctor) {
+          throw new NotFoundException(`Doctor with id ${doctorId} not found`);
+        }
+      }
+
+      // Validate that the referenced patient exists
+      const patientId = createAppointmentDto.patientId;
+      if (patientId) {
+        const patient = await this.patientRepository.findOne({
+          where: { id: patientId },
+        });
+        if (!patient) {
+          throw new NotFoundException(`Patient with id ${patientId} not found`);
+        }
+      }
+
+      const appointment =
+        this.appointmentRepository.create(createAppointmentDto);
+
       this.logger.log('Creating appointment...');
       return await this.appointmentRepository.save(appointment);
     } catch (error) {
