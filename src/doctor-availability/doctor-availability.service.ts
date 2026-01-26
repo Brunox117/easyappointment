@@ -7,9 +7,14 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { DoctorAvailability } from './entities/doctor-availability.entity';
+import {
+  DoctorAvailabilityException,
+  DoctorAvailabilityExceptionType,
+} from './entities/doctor-availability-exception.entity';
 import { handleErrors } from 'src/utilities/helpers/handle-errors';
 import { CreateDoctorAvailabilityDto } from './dto/create-doctor-availability.dto';
 import { UpdateDoctorAvailabilityDto } from './dto/update-doctor-availability.dto';
+import { DoctorAvailabilityExceptionService } from './doctor-availability-exception.service';
 
 @Injectable()
 export class DoctorAvailabilityService {
@@ -20,6 +25,7 @@ export class DoctorAvailabilityService {
   constructor(
     @InjectRepository(DoctorAvailability)
     private readonly doctorAvailabilityRepository: Repository<DoctorAvailability>,
+    private readonly doctorAvailabilityExceptionService: DoctorAvailabilityExceptionService,
   ) {}
 
   async findByDoctorAndRange(
@@ -200,13 +206,104 @@ export class DoctorAvailabilityService {
     }
   }
 
+  async getAvailabilitySnapshot(
+    doctorId: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<DailyAvailabilitySnapshot[] | undefined> {
+    try {
+      if (!doctorId || !rangeStart || !rangeEnd) {
+        return [];
+      }
+
+      const recurringSlots = await this.findByDoctorAndRange(
+        doctorId,
+        rangeStart,
+        rangeEnd,
+      );
+      const exceptions =
+        await this.doctorAvailabilityExceptionService.findByDoctorAndRange(
+          doctorId,
+          rangeStart,
+          rangeEnd,
+        );
+
+      const dates = this.getDatesBetween(rangeStart, rangeEnd);
+      if (!dates.length) {
+        return [];
+      }
+
+      const slotsByWeekday = new Map<number, DoctorAvailability[]>();
+      recurringSlots?.forEach((slot) => {
+        const existing = slotsByWeekday.get(slot.weekday) ?? [];
+        existing.push(slot);
+        slotsByWeekday.set(slot.weekday, existing);
+      });
+
+      const exceptionsByDate = new Map<string, DoctorAvailabilityException[]>();
+      exceptions?.forEach((exception) => {
+        const key = this.toDateKey(exception.date);
+        const existing = exceptionsByDate.get(key) ?? [];
+        existing.push(exception);
+        exceptionsByDate.set(key, existing);
+      });
+
+      return dates.map((date) => {
+        const dateKey = this.toDateKey(date);
+        const dayExceptions = exceptionsByDate.get(dateKey) ?? [];
+        const weekday = date.getUTCDay();
+        const isBlocked = dayExceptions.some(
+          (exception) =>
+            exception.type === DoctorAvailabilityExceptionType.BLOCKED,
+        );
+
+        const recurringForDay =
+          isBlocked || !slotsByWeekday.has(weekday)
+            ? []
+            : slotsByWeekday.get(weekday) ?? [];
+
+        const slots: AvailabilitySlotSnapshot[] = [
+          ...recurringForDay.map((slot) => ({
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            source: 'recurring' as const,
+            clinicId: slot.clinicId,
+            notes: slot.notes,
+          })),
+          ...dayExceptions
+            .filter(
+              (exception) =>
+                exception.type ===
+                DoctorAvailabilityExceptionType.EXTRA_HOURS,
+            )
+            .map((exception) => ({
+              startTime: exception.startTime!,
+              endTime: exception.endTime!,
+              source: 'extra' as const,
+              reason: exception.reason,
+            })),
+        ];
+
+        return {
+          date: dateKey,
+          weekday,
+          slots,
+          exceptions: dayExceptions,
+        };
+      });
+    } catch (error) {
+      this.logger.error(
+        `[DoctorAvailability] error building availability snapshot: ${JSON.stringify(
+          error,
+        )}`,
+      );
+      handleErrors(error);
+    }
+  }
+
   private getWeekdaysBetween(start: Date, end: Date): number[] {
-    const normalizedStart = new Date(
-      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()),
-    );
-    const normalizedEnd = new Date(
-      Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()),
-    );
+    const normalizedStart = this.normalizeDate(start);
+    const normalizedEnd = this.normalizeDate(end);
 
     if (normalizedEnd < normalizedStart) {
       return [];
@@ -220,6 +317,38 @@ export class DoctorAvailabilityService {
     }
 
     return Array.from(uniqueWeekdays);
+  }
+
+  private getDatesBetween(start: Date, end: Date): Date[] {
+    const normalizedStart = this.normalizeDate(start);
+    const normalizedEnd = this.normalizeDate(end);
+
+    if (normalizedEnd < normalizedStart) {
+      return [];
+    }
+
+    const dates: Date[] = [];
+    const cursor = new Date(normalizedStart);
+    while (cursor <= normalizedEnd) {
+      dates.push(new Date(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return dates;
+  }
+
+  private normalizeDate(date: Date): Date {
+    return new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+      ),
+    );
+  }
+
+  private toDateKey(date: Date): string {
+    return date.toISOString().split('T')[0];
   }
 
   private validateTimeOrder(start: string, end: string) {
@@ -283,4 +412,20 @@ export class DoctorAvailabilityService {
     const [hours, minutes] = time.split(':').map((value) => Number(value));
     return hours * 60 + minutes;
   }
+}
+
+export interface AvailabilitySlotSnapshot {
+  startTime: string;
+  endTime: string;
+  source: 'recurring' | 'extra';
+  reason?: string;
+  clinicId?: string;
+  notes?: string;
+}
+
+export interface DailyAvailabilitySnapshot {
+  date: string;
+  weekday: number;
+  slots: AvailabilitySlotSnapshot[];
+  exceptions: DoctorAvailabilityException[];
 }
