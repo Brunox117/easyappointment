@@ -46,8 +46,10 @@ export class AiToolsService {
             endTime: endTime.toISOString(),
             status: AppointmentStatus.SCHEDULED,
           });
-          
-          this.logger.log(`Cita creada exitosamente: ${JSON.stringify(result)}`);
+
+          this.logger.log(
+            `Cita creada exitosamente: ${JSON.stringify(result)}`,
+          );
           return result;
         } catch (error) {
           this.logger.error(`Error al crear cita: ${JSON.stringify(error)}`);
@@ -67,12 +69,18 @@ export class AiToolsService {
       }),
       execute: async ({ name }) => {
         try {
-          this.logger.log(`Cambiando nombre del paciente ${patientId} a ${name}`);
+          this.logger.log(
+            `Cambiando nombre del paciente ${patientId} a ${name}`,
+          );
           const result = await this.patientsService.update(patientId, { name });
-          this.logger.log(`Nombre de paciente actualizado exitosamente: ${JSON.stringify(result)}`);
+          this.logger.log(
+            `Nombre de paciente actualizado exitosamente: ${JSON.stringify(result)}`,
+          );
           return result;
         } catch (error) {
-          this.logger.error(`Error al cambiar nombre de paciente: ${JSON.stringify(error)}`);
+          this.logger.error(
+            `Error al cambiar nombre de paciente: ${JSON.stringify(error)}`,
+          );
           throw error;
         }
       },
@@ -117,11 +125,15 @@ export class AiToolsService {
             specialty: specialty || 'general',
             doctorName: doctorName || 'cualquier médico',
           };
-          
-          this.logger.log(`Disponibilidad consultada exitosamente: ${JSON.stringify(result)}`);
+
+          this.logger.log(
+            `Disponibilidad consultada exitosamente: ${JSON.stringify(result)}`,
+          );
           return result;
         } catch (error) {
-          this.logger.error(`Error al consultar disponibilidad: ${JSON.stringify(error)}`);
+          this.logger.error(
+            `Error al consultar disponibilidad: ${JSON.stringify(error)}`,
+          );
           throw error;
         }
       },

@@ -13,6 +13,7 @@ import { AiToolsModule } from './ai-tools/ai-tools.module';
 import { AuthModule } from './auth/auth.module';
 import { TelegramIntegrationModule } from './telegram-integration/telegram-integration.module';
 import { LlmServiceModule } from './llm-service/llm-service.module';
+import { DoctorAvailabilityModule } from './doctor-availability/doctor-availability.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { LlmServiceModule } from './llm-service/llm-service.module';
     AiToolsModule,
     TelegramIntegrationModule,
     LlmServiceModule,
+    DoctorAvailabilityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

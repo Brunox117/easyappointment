@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Clinic } from '../../clinic/entities/clinic.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
+import { DoctorAvailability } from '../../doctor-availability/entities/doctor-availability.entity';
 
 @Entity('users')
 export class User {
@@ -41,6 +42,12 @@ export class User {
 
   @OneToMany(() => Appointment, (appointment) => appointment.doctor)
   doctorAppointments?: Appointment[];
+
+  @OneToMany(
+    () => DoctorAvailability,
+    (availability) => availability.doctor,
+  )
+  doctorAvailabilities?: DoctorAvailability[];
 
   @Column('text', {
     array: true,
