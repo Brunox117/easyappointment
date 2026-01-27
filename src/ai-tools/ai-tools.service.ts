@@ -87,7 +87,7 @@ export class AiToolsService {
     });
   }
 
-  getAvailabilityTool() {
+  getAvailabilityTool(doctorId: string) {
     return tool({
       description:
         'Obtiene las fechas y horarios disponibles para agendar citas médicas',

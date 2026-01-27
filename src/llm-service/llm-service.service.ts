@@ -62,7 +62,12 @@ EJEMPLOS DE RESPUESTAS:
         },
       ];
       const tools = {
-        getAvailableDates: this.aiToolsService.getAvailabilityTool(),
+        ...(doctorId
+          ? {
+              getAvailableDates:
+                this.aiToolsService.getAvailabilityTool(doctorId),
+            }
+          : {}),
         ...(patientId
           ? {
               changeUserName: this.aiToolsService.changeUserNameTool(patientId),
@@ -85,8 +90,7 @@ EJEMPLOS DE RESPUESTAS:
         tools,
         stopWhen: stepCountIs(2),
       });
-      
-      // Log detallado para debugging
+
       this.logger.log(`LLM response received. Text: ${result.text}`);
       if (result.toolCalls) {
         this.logger.log(`Tool calls made: ${JSON.stringify(result.toolCalls)}`);
@@ -94,18 +98,26 @@ EJEMPLOS DE RESPUESTAS:
       if (result.toolResults) {
         this.logger.log(`Tool results: ${JSON.stringify(result.toolResults)}`);
       }
-      
+
       return result.text;
     } catch (error) {
       this.logger.error(`Error en chat LLM: ${JSON.stringify(error)}`);
-      this.logger.error(`Stack trace: ${error.stack}`);
-      
-      // Manejo específico para errores de tools
-      if (error.message && error.message.includes('tool')) {
+      this.logger.error(
+        `Stack trace: ${error instanceof Error ? error.stack : ''}`,
+      );
+
+      const errorMessage =
+        typeof error === 'string'
+          ? error
+          : error instanceof Error
+            ? error.message
+            : '';
+
+      if (errorMessage.includes('tool')) {
         this.logger.error('Error detectado en ejecución de tool');
         return 'Lo siento, tuve un problema al procesar tu solicitud. Por favor intenta nuevamente.';
       }
-      
+
       handleErrors(error);
     }
   }

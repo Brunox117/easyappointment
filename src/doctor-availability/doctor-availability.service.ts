@@ -300,6 +300,92 @@ export class DoctorAvailabilityService {
     }
   }
 
+  async isDoctorAvailableForRange(
+    doctorId: string,
+    clinicId: string | undefined,
+    startIso: string,
+    endIso: string,
+  ): Promise<DoctorAvailabilityCheckResult> {
+    if (!doctorId || !startIso || !endIso) {
+      return {
+        available: false,
+        reason: 'Doctor, clinic, and appointment range are required',
+      };
+    }
+
+    const startDate = new Date(startIso);
+    const endDate = new Date(endIso);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return {
+        available: false,
+        reason: 'Invalid ISO date provided for the appointment range',
+      };
+    }
+
+    if (startDate >= endDate) {
+      return {
+        available: false,
+        reason: 'Appointment range must have a positive duration',
+      };
+    }
+
+    const normalizedStart = this.normalizeDate(startDate);
+    const normalizedEnd = this.normalizeDate(endDate);
+    if (normalizedStart.getTime() !== normalizedEnd.getTime()) {
+      return {
+        available: false,
+        reason: 'Appointment must stay within a single calendar day',
+      };
+    }
+
+    const snapshots =
+      (await this.getAvailabilitySnapshot(doctorId, startDate, endDate)) ?? [];
+    const dayKey = this.toDateKey(startDate);
+    const daySnapshot = snapshots.find((snapshot) => snapshot.date === dayKey);
+
+    if (!daySnapshot) {
+      return {
+        available: false,
+        reason: 'No availability defined for the requested date',
+      };
+    }
+
+    const isBlocked = daySnapshot.exceptions.some(
+      (exception) => exception.type === DoctorAvailabilityExceptionType.BLOCKED,
+    );
+    if (isBlocked) {
+      return {
+        available: false,
+        reason: 'Doctor is blocked on the requested date',
+      };
+    }
+
+    const requestStartTime = this.dateToUtcTimeString(startDate);
+    const requestEndTime = this.dateToUtcTimeString(endDate);
+    const requestStart = this.timeToMinutes(requestStartTime);
+    const requestEnd = this.timeToMinutes(requestEndTime);
+
+    const matchingSlot = daySnapshot.slots.find((slot) => {
+      if (slot.clinicId && clinicId !== slot.clinicId) {
+        return false;
+      }
+
+      const slotStart = this.timeToMinutes(slot.startTime);
+      const slotEnd = this.timeToMinutes(slot.endTime);
+
+      return requestStart >= slotStart && requestEnd <= slotEnd;
+    });
+
+    if (!matchingSlot) {
+      return {
+        available: false,
+        reason: 'Requested time range falls outside available slots',
+      };
+    }
+
+    return { available: true };
+  }
+
   private getWeekdaysBetween(start: Date, end: Date): number[] {
     const normalizedStart = this.normalizeDate(start);
     const normalizedEnd = this.normalizeDate(end);
@@ -407,6 +493,12 @@ export class DoctorAvailabilityService {
     const [hours, minutes] = time.split(':').map((value) => Number(value));
     return hours * 60 + minutes;
   }
+
+  private dateToUtcTimeString(date: Date): string {
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
 }
 
 export interface AvailabilitySlotSnapshot {
@@ -423,4 +515,9 @@ export interface DailyAvailabilitySnapshot {
   weekday: number;
   slots: AvailabilitySlotSnapshot[];
   exceptions: DoctorAvailabilityException[];
+}
+
+export interface DoctorAvailabilityCheckResult {
+  available: boolean;
+  reason?: string;
 }
