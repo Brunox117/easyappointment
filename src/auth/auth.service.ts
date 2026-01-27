@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -33,9 +38,19 @@ export class AuthService {
         ...userToReturn,
         token: this.getJwtToken({ id: user.id }),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(error);
-      handleErrors(error);
+      const errorMessage =
+        typeof error === 'string'
+          ? error
+          : error instanceof Error
+            ? error.message
+            : '';
+      if (errorMessage.includes('duplicate key value')) {
+        throw new BadRequestException('Email already exists');
+      } else {
+        handleErrors(error);
+      }
     }
   }
 

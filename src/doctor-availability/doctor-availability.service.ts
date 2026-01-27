@@ -260,7 +260,7 @@ export class DoctorAvailabilityService {
         const recurringForDay =
           isBlocked || !slotsByWeekday.has(weekday)
             ? []
-            : slotsByWeekday.get(weekday) ?? [];
+            : (slotsByWeekday.get(weekday) ?? []);
 
         const slots: AvailabilitySlotSnapshot[] = [
           ...recurringForDay.map((slot) => ({
@@ -273,8 +273,7 @@ export class DoctorAvailabilityService {
           ...dayExceptions
             .filter(
               (exception) =>
-                exception.type ===
-                DoctorAvailabilityExceptionType.EXTRA_HOURS,
+                exception.type === DoctorAvailabilityExceptionType.EXTRA_HOURS,
             )
             .map((exception) => ({
               startTime: exception.startTime!,
@@ -339,11 +338,7 @@ export class DoctorAvailabilityService {
 
   private normalizeDate(date: Date): Date {
     return new Date(
-      Date.UTC(
-        date.getUTCFullYear(),
-        date.getUTCMonth(),
-        date.getUTCDate(),
-      ),
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
     );
   }
 

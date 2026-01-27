@@ -48,10 +48,7 @@ export class DoctorAvailabilityController {
   }
 
   @Delete(':id')
-  remove(
-    @GetUser('id') doctorId: string,
-    @Param('id') id: string,
-  ) {
+  remove(@GetUser('id') doctorId: string, @Param('id') id: string) {
     return this.doctorAvailabilityService.remove(doctorId, id);
   }
 
@@ -82,10 +79,7 @@ export class DoctorAvailabilityController {
   }
 
   @Delete('exceptions/:id')
-  removeException(
-    @GetUser('id') doctorId: string,
-    @Param('id') id: string,
-  ) {
+  removeException(@GetUser('id') doctorId: string, @Param('id') id: string) {
     return this.doctorAvailabilityExceptionService.remove(doctorId, id);
   }
 }
