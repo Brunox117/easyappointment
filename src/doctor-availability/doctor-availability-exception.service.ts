@@ -209,7 +209,11 @@ export class DoctorAvailabilityExceptionService {
     }
 
     return new Date(
-      Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()),
+      Date.UTC(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth(),
+        parsed.getUTCDate(),
+      ),
     );
   }
 

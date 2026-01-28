@@ -10,9 +10,10 @@ import { Appointment } from './entities/appointment.entity';
 import { Clinic } from 'src/clinic/entities/clinic.entity';
 import { User } from 'src/auth/entities/user.entity';
 import { Patient } from 'src/patients/entities/patient.entity';
-import { Repository } from 'typeorm';
+import { Repository, Between, Not, In } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { handleErrors } from 'src/utilities/helpers/handle-errors';
+import { AppointmentStatus } from './entities/appointment-status.enum';
 import { DoctorAvailabilityService } from 'src/doctor-availability/doctor-availability.service';
 import { toIsoString } from './helpers/date-converter.helper';
 
@@ -223,6 +224,36 @@ export class AppointmentsService {
     } catch (error) {
       this.logger.error(error);
       handleErrors(error);
+    }
+  }
+
+  async findByDoctorAndDateRange(
+    doctorId: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<Appointment[]> {
+    try {
+      this.logger.log(
+        `Finding appointments for doctor ${doctorId} from ${rangeStart.toISOString()} to ${rangeEnd.toISOString()}`,
+      );
+
+      return await this.appointmentRepository.find({
+        where: {
+          doctorId,
+          startTime: Between(rangeStart, rangeEnd),
+          // Excluir citas que liberan el slot
+          status: Not(
+            In([AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED]),
+          ),
+        },
+        order: {
+          startTime: 'ASC',
+        },
+      });
+    } catch (error) {
+      this.logger.error(error);
+      handleErrors(error);
+      throw error;
     }
   }
 }

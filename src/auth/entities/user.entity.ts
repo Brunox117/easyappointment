@@ -43,10 +43,7 @@ export class User {
   @OneToMany(() => Appointment, (appointment) => appointment.doctor)
   doctorAppointments?: Appointment[];
 
-  @OneToMany(
-    () => DoctorAvailability,
-    (availability) => availability.doctor,
-  )
+  @OneToMany(() => DoctorAvailability, (availability) => availability.doctor)
   doctorAvailabilities?: DoctorAvailability[];
 
   @Column('text', {
