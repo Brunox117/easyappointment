@@ -4,13 +4,31 @@ import { AppointmentsService } from 'src/appointments/appointments.service';
 import { AppointmentStatus } from 'src/appointments/entities/appointment-status.enum';
 import { PatientsService } from 'src/patients/patients.service';
 import { z } from 'zod';
+import { DoctorAvailabilityService } from 'src/doctor-availability/doctor-availability.service';
+import { AvailabilitySlotSnapshot } from 'src/doctor-availability/doctor-availability.service';
+import { DoctorAvailabilityExceptionType } from 'src/doctor-availability/entities/doctor-availability-exception.entity';
+import { Appointment } from 'src/appointments/entities/appointment.entity';
+
+interface TimeSlot {
+  startTime: string; // "09:00"
+  endTime: string; // "09:30"
+}
+
+interface AvailableDate {
+  date: string; // "2026-01-27"
+  slots: string[]; // ["09:00", "09:30", "10:00"]
+}
 
 @Injectable()
 export class AiToolsService {
   private readonly logger = new Logger(AiToolsService.name);
+  private readonly DEFAULT_SLOT_DURATION = 30; // minutos
+  private readonly DEFAULT_RANGE_DAYS = 14; // 2 semanas
+
   constructor(
     private readonly patientsService: PatientsService,
     private readonly appointmentsService: AppointmentsService,
+    private readonly doctorAvailabilityService: DoctorAvailabilityService,
   ) {}
 
   createAppointmentTool(patientId: string, doctorId: string, clinicId: string) {
@@ -90,45 +108,110 @@ export class AiToolsService {
   getAvailabilityTool(doctorId: string) {
     return tool({
       description:
-        'Obtiene las fechas y horarios disponibles para agendar citas médicas',
+        'Obtiene las fechas y horarios disponibles para agendar citas médicas. ' +
+        'Devuelve slots de 30 minutos considerando la disponibilidad del doctor y citas existentes.',
       inputSchema: z.object({
-        specialty: z
+        startDate: z
           .string()
           .optional()
-          .describe('Especialidad médica requerida'),
-        doctorName: z
+          .describe('Fecha inicial del rango (ISO 8601). Default: hoy'),
+        endDate: z
           .string()
           .optional()
-          .describe('Nombre del médico (opcional)'),
+          .describe(
+            'Fecha final del rango (ISO 8601). Default: 14 días después',
+          ),
       }),
-      execute: ({ specialty, doctorName }) => {
+      execute: async ({ startDate, endDate }) => {
         try {
+          const now = new Date();
+          const rangeStart = startDate ? new Date(startDate) : now;
+          const rangeEnd = endDate
+            ? new Date(endDate)
+            : new Date(
+                now.getTime() + this.DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000,
+              );
+
+          if (isNaN(rangeStart.getTime()) || isNaN(rangeEnd.getTime())) {
+            throw new BadRequestException('Fechas inválidas');
+          }
+
           this.logger.log(
-            `Consultando disponibilidad para especialidad: ${specialty}, médico: ${doctorName}`,
+            `Consultando disponibilidad para doctor ${doctorId} del ${rangeStart.toISOString()} al ${rangeEnd.toISOString()}`,
           );
 
+          const availabilitySnapshot =
+            await this.doctorAvailabilityService.getAvailabilitySnapshot(
+              doctorId,
+              rangeStart,
+              rangeEnd,
+            );
+
+          if (!availabilitySnapshot || availabilitySnapshot.length === 0) {
+            return {
+              availableDates: [],
+              message:
+                'No hay disponibilidad configurada para el rango seleccionado',
+            };
+          }
+
+          const existingAppointments =
+            await this.appointmentsService.findByDoctorAndDateRange(
+              doctorId,
+              rangeStart,
+              rangeEnd,
+            );
+
+          const appointmentsByDate = new Map<string, Appointment[]>();
+          for (const apt of existingAppointments || []) {
+            const dateKey = apt.startTime.toISOString().split('T')[0];
+            const existing = appointmentsByDate.get(dateKey) || [];
+            existing.push(apt);
+            appointmentsByDate.set(dateKey, existing);
+          }
+
+          const availableDates: AvailableDate[] = [];
+
+          for (const day of availabilitySnapshot) {
+            const isBlocked = day.exceptions.some(
+              (e) => e.type === DoctorAvailabilityExceptionType.BLOCKED,
+            );
+            if (isBlocked || day.slots.length === 0) {
+              continue;
+            }
+
+            const dayAppointments = appointmentsByDate.get(day.date) || [];
+            const availableSlots = this.calculateAvailableSlots(
+              day.slots,
+              dayAppointments,
+              this.DEFAULT_SLOT_DURATION,
+            );
+
+            if (availableSlots.length > 0) {
+              availableDates.push({
+                date: day.date,
+                slots: availableSlots,
+              });
+            }
+          }
+
           const result = {
-            availableDates: [
-              {
-                date: '2026-01-20',
-                slots: ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'],
-              },
-              {
-                date: '2026-01-21',
-                slots: ['09:00', '10:00', '14:00', '15:00', '16:00'],
-              },
-              {
-                date: '2026-01-22',
-                slots: ['09:00', '10:00', '11:00', '14:00', '15:00'],
-              },
-            ],
-            specialty: specialty || 'general',
-            doctorName: doctorName || 'cualquier médico',
+            availableDates,
+            totalDays: availableDates.length,
+            totalSlots: availableDates.reduce(
+              (sum, d) => sum + d.slots.length,
+              0,
+            ),
+            range: {
+              from: rangeStart.toISOString().split('T')[0],
+              to: rangeEnd.toISOString().split('T')[0],
+            },
           };
 
           this.logger.log(
-            `Disponibilidad consultada exitosamente: ${JSON.stringify(result)}`,
+            `Disponibilidad calculada: ${result.totalSlots} slots en ${result.totalDays} días`,
           );
+
           return result;
         } catch (error) {
           this.logger.error(
@@ -138,5 +221,67 @@ export class AiToolsService {
         }
       },
     });
+  }
+
+  private calculateAvailableSlots(
+    availabilitySlots: AvailabilitySlotSnapshot[],
+    appointments: Appointment[],
+    slotDurationMinutes: number = 30,
+  ): string[] {
+    // 1. Generar todos los slots posibles basados en disponibilidad
+    const possibleSlots: TimeSlot[] = [];
+
+    for (const avail of availabilitySlots) {
+      const startMinutes = this.timeToMinutes(avail.startTime);
+      const endMinutes = this.timeToMinutes(avail.endTime);
+
+      for (
+        let current = startMinutes;
+        current < endMinutes;
+        current += slotDurationMinutes
+      ) {
+        possibleSlots.push({
+          startTime: this.minutesToTime(current),
+          endTime: this.minutesToTime(current + slotDurationMinutes),
+        });
+      }
+    }
+
+    // 2. Filtrar slots que se solapan con citas existentes
+    const bookedRanges = appointments.map((apt) => ({
+      start: this.timeToMinutes(this.formatTime(apt.startTime)),
+      end: this.timeToMinutes(this.formatTime(apt.endTime)),
+    }));
+
+    const availableSlots = possibleSlots.filter((slot) => {
+      const slotStart = this.timeToMinutes(slot.startTime);
+      const slotEnd = this.timeToMinutes(slot.endTime);
+
+      // El slot está disponible si NO se solapa con ninguna cita
+      return !bookedRanges.some(
+        (booked) => slotStart < booked.end && slotEnd > booked.start,
+      );
+    });
+
+    // 3. Retornar solo los horarios de inicio
+    return availableSlots.map((slot) => slot.startTime);
+  }
+
+  // Helpers
+  private timeToMinutes(time: string): number {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  private minutesToTime(minutes: number): string {
+    const hours = Math.floor(minutes / 60)
+      .toString()
+      .padStart(2, '0');
+    const mins = (minutes % 60).toString().padStart(2, '0');
+    return `${hours}:${mins}`;
+  }
+
+  private formatTime(date: Date): string {
+    return date.toISOString().split('T')[1].substring(0, 5);
   }
 }
