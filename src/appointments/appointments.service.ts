@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { Appointment } from './entities/appointment.entity';
@@ -8,6 +13,8 @@ import { Patient } from 'src/patients/entities/patient.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { handleErrors } from 'src/utilities/helpers/handle-errors';
+import { DoctorAvailabilityService } from 'src/doctor-availability/doctor-availability.service';
+import { toIsoString } from './helpers/date-converter.helper';
 
 @Injectable()
 export class AppointmentsService {
@@ -22,6 +29,7 @@ export class AppointmentsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Patient)
     private readonly patientRepository: Repository<Patient>,
+    private readonly doctorAvailabilityService: DoctorAvailabilityService,
   ) {}
 
   async create(createAppointmentDto: CreateAppointmentDto) {
@@ -58,6 +66,21 @@ export class AppointmentsService {
         if (!patient) {
           throw new NotFoundException(`Patient with id ${patientId} not found`);
         }
+      }
+
+      // Validate doctor availability for the requested time range
+      const availabilityResult =
+        await this.doctorAvailabilityService.isDoctorAvailableForRange(
+          doctorId,
+          clinicId,
+          createAppointmentDto.startTime,
+          createAppointmentDto.endTime,
+        );
+
+      if (!availabilityResult.available) {
+        throw new BadRequestException(
+          availabilityResult.reason || 'Doctor is not available at this time',
+        );
       }
 
       const appointment =
@@ -98,6 +121,14 @@ export class AppointmentsService {
   }
 
   async update(id: string, updateAppointmentDto: UpdateAppointmentDto) {
+    // Fetch the existing appointment to get current values
+    const existingAppointment = await this.appointmentRepository.findOne({
+      where: { id },
+    });
+    if (!existingAppointment) {
+      throw new NotFoundException(`Appointment with id ${id} not found`);
+    }
+
     // If clinicId is being updated, validate the new clinic exists
     const newClinicId = updateAppointmentDto.clinicId;
     if (newClinicId) {
@@ -129,6 +160,38 @@ export class AppointmentsService {
       if (!patient) {
         throw new NotFoundException(
           `Patient with id ${newPatientId} not found`,
+        );
+      }
+    }
+
+    // Determine the effective values for availability check
+    const effectiveDoctorId = newDoctorId ?? existingAppointment.doctorId;
+    const effectiveClinicId = newClinicId ?? existingAppointment.clinicId;
+    const effectiveStartTime =
+      updateAppointmentDto.startTime ??
+      toIsoString(existingAppointment.startTime);
+    const effectiveEndTime =
+      updateAppointmentDto.endTime ?? toIsoString(existingAppointment.endTime);
+
+    // Validate doctor availability if any relevant field is being changed
+    const isTimeOrDoctorOrClinicChanged =
+      updateAppointmentDto.startTime !== undefined ||
+      updateAppointmentDto.endTime !== undefined ||
+      newDoctorId !== undefined ||
+      newClinicId !== undefined;
+
+    if (isTimeOrDoctorOrClinicChanged) {
+      const availabilityResult =
+        await this.doctorAvailabilityService.isDoctorAvailableForRange(
+          effectiveDoctorId,
+          effectiveClinicId,
+          effectiveStartTime!,
+          effectiveEndTime!,
+        );
+
+      if (!availabilityResult.available) {
+        throw new BadRequestException(
+          availabilityResult.reason || 'Doctor is not available at this time',
         );
       }
     }
