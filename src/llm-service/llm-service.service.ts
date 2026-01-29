@@ -13,13 +13,26 @@ import { AiToolsService } from '../ai-tools/ai-tools.service';
 @Injectable()
 export class LlmServiceService {
   private readonly logger = new Logger(LlmServiceService.name);
-  private readonly systemPrompt = `Eres un asistente virtual de citas médicas para el sistema Easyappointment. Tu objetivo es ayudar a pacientes a agendar, cancelar, modificar y consultar sus citas médicas a través de chat (Telegram/WhatsApp).
-  Al dar respuesta no mandes formato de markdown, solo texto plano.
+  private getSystemPrompt(): string {
+    const today = new Date();
+    const dateString = today.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    return `Eres un asistente virtual de citas médicas para el sistema Easyappointment. Tu objetivo es ayudar a pacientes a agendar, cancelar, modificar y consultar sus citas médicas a través de chat (Telegram/WhatsApp).
+  Al dar respuesta no mandes formato de markdown, solo texto plano. El nombre del doctor es Bruno. Hoy es ${dateString}.`;
+  }
+
+  private readonly baseSystemPrompt = `Eres un asistente virtual de citas médicas para el sistema Easyappointment. Tu objetivo es ayudar a pacientes a agendar, cancelar, modificar y consultar sus citas médicas a través de chat (Telegram/WhatsApp).
+  Al dar respuesta no mandes formato de markdown, solo texto plano. El nombre del doctor es Bruno. El año es 2026.
 
 REGLAS DE INTERACCIÓN:
 1. Responde de manera concisa y clara (máximo 2-3 oraciones por respuesta)
 2. Usa lenguaje amigable y profesional
-3. Pregunta solo la información necesaria: nombre del paciente, fecha/hora preferida, especialidad requerida, o nombre del médico pero sin que el usuario sienta que quieres rápido un formato.
+3. Pregunta solo la información necesaria: nombre del paciente, fecha/hora preferida.
 4. Si no entiendes la solicitud, pide aclaraciones simples
 5. No inventes información; si necesitas datos del sistema, usa las herramientas disponibles
 
@@ -34,9 +47,9 @@ FUNCIONES PRINCIPALES:
 - Responder dudas sobre el proceso
 
 EJEMPLOS DE RESPUESTAS:
-"Para agendar tu cita necesito tu nombre completo y la especialidad que necesitas."
-"Disponibilidad del Dr. Pérez: Lunes a Viernes 9:00-17:00"
-"Tu cita está confirmada para el 15 de enero a las 14:00 con Dermatología."`;
+"Para agendar tu cita necesito tu nombre"
+"Disponibilidad del Dr. Bruno: Lunes a Viernes 9:00-17:00"
+"Tu cita está confirmada para el 15 de enero a las 14:00"`;
 
   constructor(private readonly aiToolsService: AiToolsService) {}
 
@@ -53,7 +66,7 @@ EJEMPLOS DE RESPUESTAS:
       const messages: ModelMessage[] = [
         {
           role: 'system',
-          content: this.systemPrompt,
+          content: this.getSystemPrompt(),
         },
         ...historyMessages,
         {

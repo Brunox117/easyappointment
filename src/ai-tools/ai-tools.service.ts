@@ -123,6 +123,9 @@ export class AiToolsService {
           ),
       }),
       execute: async ({ startDate, endDate }) => {
+        this.logger.log(
+          `Consultando disponibilidad para doctor ${doctorId} del ${startDate} al ${endDate}`,
+        );
         try {
           const now = new Date();
           const rangeStart = startDate ? new Date(startDate) : now;
